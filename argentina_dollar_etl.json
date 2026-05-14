@@ -1,0 +1,124 @@
+{
+  "name": "Argentina Dollar Rates - Daily ETL",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "days",
+              "triggerAtHour": 18
+            }
+          ]
+        }
+      },
+      "id": "a1b2c3d4-0001-4001-8001-000000000001",
+      "name": "Schedule Trigger - Daily 18:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        240,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://dolarapi.com/v1/dolares",
+        "options": {}
+      },
+      "id": "a1b2c3d4-0002-4002-8002-000000000002",
+      "name": "Fetch Dollar Rates",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        460,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Transform dolarapi.com response into clean, analysis-ready rows.\n// Endpoint /v1/dolares returns an array of dollar types (oficial, blue, mep, ccl, etc.).\n// The HTTP Request node emits each array element as a separate item.\n\nconst ingestedAt = new Date().toISOString();\nconst today = ingestedAt.split('T')[0];\nconst results = [];\n\nfor (const item of $input.all()) {\n  const d = item.json;\n\n  // Defensive: skip malformed records\n  if (!d || d.casa === undefined) continue;\n\n  const compra = d.compra ?? null;\n  const venta = d.venta ?? null;\n  const spread =\n    compra !== null && venta !== null\n      ? Number((venta - compra).toFixed(2))\n      : null;\n\n  results.push({\n    json: {\n      fecha: d.fechaActualizacion ? d.fechaActualizacion.split('T')[0] : today,\n      casa: d.casa,\n      nombre: d.nombre ?? d.casa,\n      moneda: d.moneda ?? 'USD',\n      compra: compra,\n      venta: venta,\n      spread: spread,\n      ingested_at: ingestedAt,\n    },\n  });\n}\n\nreturn results;\n"
+      },
+      "id": "a1b2c3d4-0003-4003-8003-000000000003",
+      "name": "Transform & Clean",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        680,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID_HERE",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {}
+        },
+        "options": {}
+      },
+      "id": "a1b2c3d4-0004-4004-8004-000000000004",
+      "name": "Append to Historical Sheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        900,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Schedule Trigger - Daily 18:00": {
+      "main": [
+        [
+          {
+            "node": "Fetch Dollar Rates",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Dollar Rates": {
+      "main": [
+        [
+          {
+            "node": "Transform & Clean",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Transform & Clean": {
+      "main": [
+        [
+          {
+            "node": "Append to Historical Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "1",
+  "meta": {
+    "templatecredsSetupCompleted": false
+  },
+  "tags": []
+}
