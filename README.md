@@ -42,9 +42,8 @@ The workflow follows a standard **Extract -> Transform -> Load** pattern:
 
 Screenshots of the workflow canvas in the n8n editor.
 
-![Workflow Canvas](docs/screenshots/workflow_canvas.png)
-
-![Execution Result](docs/screenshots/execution_result.png)
+![Workflow Canvas](docs/screenshots/workflow-diagram.PNG)
+![Execution Result](docs/screenshots/output-sample.png)
 
 ---
 
